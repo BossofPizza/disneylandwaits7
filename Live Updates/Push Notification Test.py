@@ -1,41 +1,56 @@
+import time
 import requests
 from bs4 import BeautifulSoup
-from pushbullet import Pushbullet
-import time
+import httpx
 
-# Set up Pushbullet API
-api_key = "o.qsbbsuZVEE3HGrkftTBPbxqwAzbDV1Ao12"  # Replace with your API key
-pb = Pushbullet(api_key)
+# Pushover credentials
+api_token = "amqmtqh5hjne37tk68keg9iwytjwhd"
+user_key = "unb249suwmpir19ng1zguhxqxyyfgd"
 
 # Define the URL
 url = "https://www.thrill-data.com/waits/park/dlr/disneyland/"
 
-# Send a GET request to retrieve the page's content
-response = requests.get(url)
+def send_notification():
+    # Send a GET request to retrieve the page's content
+    response = requests.get(url)
+    soup = BeautifulSoup(response.text, "html.parser")
 
-# Parse the HTML content
-soup = BeautifulSoup(response.text, "html.parser")
+    # Find all anchor tags with the title attribute containing the ride name
+    ride_name_elements = soup.find_all("a", title=True)
 
-# Find all anchor tags with the title attribute containing the ride name
-ride_name_elements = soup.find_all("a", title=True)
+    # Iterate through all found ride names to find Space Mountain
+    for ride in ride_name_elements:
+        ride_name = ride.get_text(strip=True)
 
-# Iterate through all found ride names to find Space Mountain
-for ride in ride_name_elements:
-    ride_name = ride.get_text(strip=True)
+        if ride_name == "Space Mountain":
+            parent_tr = ride.find_parent("tr")
+            td_elements = parent_tr.find_all("td")
 
-    # Only check Space Mountain
-    if ride_name == "Space Mountain":
-        # Find the parent row <tr> and extract the wait time
-        parent_tr = ride.find_parent("tr")
+            if len(td_elements) >= 4:
+                wait_time_td = td_elements[3]
+                wait_time = wait_time_td.find("div")["title"] if wait_time_td.find("div") else None
+            else:
+                wait_time = "closed"
 
-        # Look for the fourth <td> in the row (index 3 since it's zero-indexed)
-        wait_time_td = parent_tr.find_all("td")[3]  # Fourth td for wait time
+            if wait_time == "closed":
+                message = "Space Mountain is currently closed."
+            else:
+                message = f"Current Wait Time: {wait_time}"
 
-        # Get the title attribute to extract wait time (like "40 Minute Wait")
-        wait_time = wait_time_td.find("div")["title"] if wait_time_td.find("div") else None
+            # Send the notification using Pushover
+            pushover_response = httpx.post(
+                "https://api.pushover.net/1/messages.json",
+                data={
+                    "token": api_token,
+                    "user": user_key,
+                    "title": "Space Mountain Wait Time",
+                    "message": message
+                }
+            )
 
-        # If wait time is found, send the push notification
-        if wait_time:
-            notification = pb.push_note(f"Space Mountain Wait Time", f"Current Wait Time: {wait_time}")
-            print(f"Push Notification Sent: {notification}")
-        break  # Exit the loop once we find Space Mountain
+            print(f"Push Notification Sent: {message}")
+            break  # Exit the loop once we find Space Mountain
+
+while True:
+    send_notification()
+    time.sleep(300)  # Wait for 5 minutes (300 seconds)

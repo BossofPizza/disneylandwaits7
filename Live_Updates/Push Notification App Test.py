@@ -1,24 +1,16 @@
-from flask import Flask, render_template, request
+import streamlit as st
 import requests
 from bs4 import BeautifulSoup
 from pushbullet import Pushbullet
 
-app = Flask(__name__)
-
 # Define your Pushover API token and User key
-api_token = "your-api-token"  # Replace with your Pushover API token
-user_key = "your-user-key"  # Replace with your Pushover User key
+api_token = "amqmtqh5hjne37tk68keg9iwytjwhd"  # Replace with your Pushover API token
+user_key = "unb249suwmpir19ng1zguhxqxyyfgd"  # Replace with your Pushover User key
 
 # Define the URL for the wait times
 url = "https://www.thrill-data.com/waits/park/dlr/disneyland/"
 
-
-@app.route('/')
-def home():
-    return render_template('index.html')  # Create an HTML page for the front-end
-
-
-@app.route('/get_wait_time')
+# Function to get wait time for Space Mountain
 def get_wait_time():
     # Send a GET request to retrieve the page's content
     response = requests.get(url)
@@ -49,7 +41,7 @@ def get_wait_time():
 
     return "Space Mountain not found!"
 
-
+# Function to send a Pushover notification
 def send_pushover_notification(message):
     """Send a notification to the user via Pushover."""
     payload = {
@@ -65,6 +57,11 @@ def send_pushover_notification(message):
     else:
         print("Failed to send notification.")
 
+# Streamlit layout
+st.title("Disneyland Wait Times Checker")
+st.write("Click the button below to get the current wait time for Space Mountain!")
 
-if __name__ == '__main__':
-    app.run(debug=True)
+if st.button("Get Wait Time"):
+    message = get_wait_time()
+    st.write(message)  # Display the message on Streamlit page
+

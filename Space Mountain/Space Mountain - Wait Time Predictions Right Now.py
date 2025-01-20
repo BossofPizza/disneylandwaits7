@@ -37,14 +37,9 @@ all_data_df['Day'] = all_data_df['Day'].astype('category')
 all_data_df['Month'] = all_data_df['Date/Time'].dt.month.astype('category')
 
 # Prepare data for manual linear regression model
-X = all_data_df[['Day', 'Month', 'Hour']].values
-y = all_data_df['Wait Time'].values
-
-# Convert 'Day' and 'Month' from categorical to numeric codes
 all_data_df['Day_Code'] = all_data_df['Day'].cat.codes
 all_data_df['Month_Code'] = all_data_df['Month'].cat.codes
 
-# Use 'Day_Code', 'Month_Code', and 'Hour' as features, 'Wait Time' as target
 X = all_data_df[['Day_Code', 'Month_Code', 'Hour']].values
 y = all_data_df['Wait Time'].values
 
@@ -55,20 +50,28 @@ X_ = np.c_[np.ones(X.shape[0]), X]
 X_transpose = X_.T
 beta = np.linalg.inv(X_transpose.dot(X_)).dot(X_transpose).dot(y)
 
-
 # Function to predict wait time for a given day, month, and hour
 def predict_wait_time(day: str, month: str, hour: int):
-    # Convert the day and month to the corresponding numeric codes
-    day_code = pd.Categorical([day], categories=all_data_df['Day'].cat.categories).codes[0]
-    month_code = pd.Categorical([month], categories=all_data_df['Month'].cat.categories).codes[0]
+    try:
+        # Convert the day and month to the corresponding numeric codes
+        day_code = all_data_df['Day'].cat.categories.get_loc(day)
+        month_code = all_data_df['Month'].cat.categories.get_loc(datetime.strptime(month, '%B').month)
 
-    # Prepare the input for prediction (add intercept term)
-    X_input = np.array([1, day_code, month_code, hour]).reshape(1, -1)
+        # Validate hour input
+        if not (0 <= hour <= 23):
+            raise ValueError("Hour must be between 0 and 23.")
 
-    # Predict the wait time using the linear regression formula
-    predicted_wait_time = X_input.dot(beta)
-    return predicted_wait_time[0]
+        # Prepare the input for prediction (add intercept term)
+        X_input = np.array([1, day_code, month_code, hour]).reshape(1, -1)
 
+        # Predict the wait time using the linear regression formula
+        predicted_wait_time = X_input.dot(beta)
+        return predicted_wait_time[0]
+
+    except KeyError as e:
+        return f"Error: {e}. Ensure the day and month names are valid."
+    except ValueError as e:
+        return str(e)
 
 # Get the current day, month, and hour
 current_datetime = datetime.now()
@@ -78,4 +81,7 @@ hour_input = round(current_datetime.hour)  # Round to nearest hour
 
 # Predict the wait time for today’s day, month, and rounded hour
 predicted_time = predict_wait_time(day_input, month_input, hour_input)
-print(f"Predicted wait time for {day_input} in {month_input} at {hour_input}:00 is {predicted_time:.2f} minutes.")
+if isinstance(predicted_time, str):
+    print(predicted_time)
+else:
+    print(f"Predicted wait time for {day_input} in {month_input} at {hour_input}:00 is {predicted_time:.2f} minutes.")

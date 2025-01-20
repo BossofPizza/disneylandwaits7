@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ride Data</title>
+</head>
+<body>
+    <h1>Disneyland Ride Data</h1>
+    <ul>
+        {% for ride in rides %}
+            <li>{{ ride.name }}: Actual Wait {{ ride.actual_wait }} mins, Average Wait {{ ride.average_wait }} mins</li>
+        {% endfor %}
+    </ul>
+</body>
+</html>
